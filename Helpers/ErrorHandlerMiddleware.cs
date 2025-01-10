@@ -1,57 +1,56 @@
-﻿using SMIJobXml.Common;
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
+using SMIJobHeader.Common;
 
-namespace SMIJobXml.Helpers
+namespace SMIJobHeader.Helpers;
+
+public class ErrorHandlerMiddleware
 {
-    public class ErrorHandlerMiddleware
+    private readonly ILogger _logger;
+    private readonly RequestDelegate _next;
+
+    public ErrorHandlerMiddleware(RequestDelegate next, ILogger<ErrorHandlerMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger _logger;
+        _next = next;
+        _logger = logger;
+    }
 
-        public ErrorHandlerMiddleware(RequestDelegate next, ILogger<ErrorHandlerMiddleware> logger)
+    public async Task Invoke(HttpContext context)
+    {
+        var response = context.Response;
+        response.ContentType = "application/json";
+        var result = string.Empty;
+        try
         {
-            _next = next;
-            _logger = logger;
+            await _next(context);
+        }
+        catch (BusinessLogicException ex)
+        {
+            response.StatusCode = (int)HttpStatusCode.BadRequest;
+            result = JsonSerializer.Serialize(new { code = (int)ex.ErrorCode, message = ex?.Message });
+        }
+        catch (Exception error)
+        {
+            switch (error)
+            {
+                case AppException e:
+                    // custom application error
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    break;
+                case KeyNotFoundException e:
+                    // not found error
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    break;
+                default:
+                    // unhandled error
+                    _logger.LogError(error, error.Message);
+                    response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    break;
+            }
+
+            result = JsonSerializer.Serialize(new { code = 99, message = error?.Message });
         }
 
-        public async Task Invoke(HttpContext context)
-        {
-            var response = context.Response;
-            response.ContentType = "application/json";
-            string result = string.Empty;
-            try
-            {
-                await _next(context);
-            }
-            catch (BusinessLogicException ex)
-            {
-                response.StatusCode = (int)HttpStatusCode.BadRequest;
-                result = JsonSerializer.Serialize(new { code = (int)ex.ErrorCode, message = ex?.Message });
-            }
-            catch (Exception error)
-            {
-
-                switch (error)
-                {
-                    case AppException e:
-                        // custom application error
-                        response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        break;
-                    case KeyNotFoundException e:
-                        // not found error
-                        response.StatusCode = (int)HttpStatusCode.NotFound;
-                        break;
-                    default:
-                        // unhandled error
-                        _logger.LogError(error, error.Message);
-                        response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                        break;
-                }
-                result = JsonSerializer.Serialize(new { code = 99, message = error?.Message });
-            }
-
-            await response.WriteAsync(result);
-        }
+        await response.WriteAsync(result);
     }
 }

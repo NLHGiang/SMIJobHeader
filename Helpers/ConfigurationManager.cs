@@ -1,22 +1,19 @@
-﻿namespace SMIJobXml.Helpers
+﻿namespace SMIJobHeader.Helpers;
+
+public static class ConfigurationManagerHelpers
 {
-    public static class ConfigurationManagerHelpers
+    static ConfigurationManagerHelpers()
     {
-        public static IConfiguration AppSetting { get; }
-        public static ILoggerFactory Logger { get; }
-        static ConfigurationManagerHelpers()
-        {
-            AppSetting = new ConfigurationBuilder()
-                    .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json")
-                    .Build();
-            var serviceProvider = new ServiceCollection()
-                        .AddLogging()
-                        .BuildServiceProvider();
-            Logger = serviceProvider.GetRequiredService<ILoggerFactory>();
-
-        }
-
-
+        AppSetting = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
+        var serviceProvider = new ServiceCollection()
+            .AddLogging()
+            .BuildServiceProvider();
+        Logger = serviceProvider.GetRequiredService<ILoggerFactory>();
     }
+
+    public static IConfiguration AppSetting { get; }
+    public static ILoggerFactory Logger { get; }
 }

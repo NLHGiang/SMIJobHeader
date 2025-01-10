@@ -1,9 +1,8 @@
-﻿namespace SMIJobXml.Constants
+﻿namespace SMIJobHeader.Constants;
+
+public enum CrawlStatus
 {
-    public enum CrawlStatus
-    {
-        Processs,
-        Succcessfull,
-        Error
-    }
+    Processs,
+    Succcessfull,
+    Error
 }

@@ -1,9 +1,8 @@
-﻿using SMIJobXml.Model.Job;
+﻿using SMIJobHeader.Model.Job;
 
-namespace SMIJobXml.BL.Interface
+namespace SMIJobHeader.BL.Interface;
+
+public interface IJobService
 {
-    public interface IJobService
-    {
-        void RegisterJob(BatchJob jobConfig);
-    }
+    void RegisterJob(BatchJob jobConfig);
 }

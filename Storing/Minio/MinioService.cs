@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using Minio;
 using Minio.Exceptions;
 
-namespace SMIJobXml.Storing.Minio;
+namespace SMIJobHeader.Storing.Minio;
 
 public class MinioService : IFileService
 {

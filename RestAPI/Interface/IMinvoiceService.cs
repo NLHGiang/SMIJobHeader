@@ -1,9 +1,8 @@
-﻿using SMIJobXml.Model.Job;
+﻿using SMIJobHeader.Model.Job;
 
-namespace SMIJobXml.RestAPI.Interface
+namespace SMIJobHeader.RestAPI.Interface;
+
+public interface IETLService
 {
-    public interface IETLService
-    {
-        Task<T> Synchronized<T>(BatchJob modelDto);
-    }
+    Task<T> Synchronized<T>(BatchJob modelDto);
 }

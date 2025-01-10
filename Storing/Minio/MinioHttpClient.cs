@@ -1,4 +1,4 @@
-namespace SMIJobXml.Storing.Minio;
+namespace SMIJobHeader.Storing.Minio;
 
 public class MinioHttpClient : IMinioHttpClient
 {

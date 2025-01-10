@@ -1,13 +1,12 @@
-﻿namespace SMIJobXml.Common
+﻿namespace SMIJobHeader.Common;
+
+public enum ResultCode
 {
-    public enum ResultCode : int
-    {
-        NoErrorGetWay = 0,
-        NoError = 1,
-        DataInvalid,
-        NotFound,
-        NotBotActive,
-        ExistedSerial,
-        UnknownError = 99,
-    }
+    NoErrorGetWay = 0,
+    NoError = 1,
+    DataInvalid,
+    NotFound,
+    NotBotActive,
+    ExistedSerial,
+    UnknownError = 99
 }

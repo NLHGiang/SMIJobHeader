@@ -1,8 +1,8 @@
-﻿using SMIJobXml.Entities.Interfaces;
-namespace SMIJobXml.DBAccessor.Interface.Repositories
+﻿using SMIJobHeader.Entities.Interfaces;
+
+namespace SMIJobHeader.DBAccessor.Interface.Repositories;
+
+public interface IAppUnitOfWork
 {
-    public interface IAppUnitOfWork
-    {
-        IMongoRepository<TEntity, T> GetRepository<TEntity, T>() where TEntity : class, IBaseEntity<T>;
-    }
+    IMongoRepository<TEntity, T> GetRepository<TEntity, T>() where TEntity : class, IBaseEntity<T>;
 }

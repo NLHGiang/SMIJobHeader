@@ -1,6 +1,6 @@
-﻿using SMIJobXml.Constants;
+﻿using SMIJobHeader.Constants;
 
-namespace SMIJobXml.Extensions;
+namespace SMIJobHeader.Extensions;
 
 public static class DateTimeExtensions
 {
@@ -34,14 +34,14 @@ public static class DateTimeExtensions
     {
         try
         {
-            using (StreamWriter w = File.AppendText(@$"C:\SMIJobXml-DateTime-ErrorLog\{DateTime.Now.ToString("yyyy_MM_dd")}.txt"))
+            using (var w = File.AppendText(
+                       @$"C:\SMIJobXml-DateTime-ErrorLog\{DateTime.Now.ToString("yyyy_MM_dd")}.txt"))
             {
                 w.WriteLine(messageLog);
             }
         }
         catch
         {
-
         }
     }
 }

@@ -1,8 +1,7 @@
-﻿namespace SMIJobXml.Model.Option
+﻿namespace SMIJobHeader.Model.Option;
+
+public class DbOption
 {
-    public class DbOption
-    {
-        public string? DbName { get; set; }
-        public string? ConnectionString { get; set; }
-    }
+    public string? DbName { get; set; }
+    public string? ConnectionString { get; set; }
 }

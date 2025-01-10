@@ -1,14 +1,13 @@
 ﻿using AutoMapper;
-using SMIJobXml.Entities;
-using SMIJobXml.Model.Message;
+using SMIJobHeader.Entities;
+using SMIJobHeader.Model.Message;
 
-namespace SMIJobXml.Helpers
+namespace SMIJobHeader.Helpers;
+
+public class AutoMapperProfile : Profile
 {
-    public class AutoMapperProfile : Profile
+    public AutoMapperProfile()
     {
-        public AutoMapperProfile()
-        {
-            CreateMap<MessageLogDto, MessageLog>();
-        }
+        CreateMap<MessageLogDto, MessageLog>();
     }
 }

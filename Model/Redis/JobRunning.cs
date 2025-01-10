@@ -1,10 +1,9 @@
-﻿namespace SMIJobXml.Model.Redis
+﻿namespace SMIJobHeader.Model.Redis;
+
+public class JobRunning
 {
-    public class JobRunning
-    {
-        public string? JobName { get; set; }
-        public bool IsRunning { get; set; }
-        public DateTime? LastRun { get; set; }
-        public DateTime? TimeWillBeFinish { get; set; }
-    }
+    public string? JobName { get; set; }
+    public bool IsRunning { get; set; }
+    public DateTime? LastRun { get; set; }
+    public DateTime? TimeWillBeFinish { get; set; }
 }

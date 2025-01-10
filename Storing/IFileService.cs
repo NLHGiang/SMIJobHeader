@@ -1,4 +1,4 @@
-namespace SMIJobXml.Storing;
+namespace SMIJobHeader.Storing;
 
 /// <summary>
 ///     The interface abstracts file handling functions

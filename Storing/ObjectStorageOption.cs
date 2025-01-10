@@ -1,4 +1,4 @@
-﻿namespace SMIJobXml.Storing;
+﻿namespace SMIJobHeader.Storing;
 
 public class ObjectStorageOption
 {

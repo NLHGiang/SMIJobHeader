@@ -1,10 +1,9 @@
-﻿using SMIJobXml.Common;
+﻿using SMIJobHeader.Common;
 
-namespace SMIJobXml.Model
+namespace SMIJobHeader.Model;
+
+public class ExceptionMessage
 {
-    public class ExceptionMessage
-    {
-        public ResultCode ErrorCode { get; set; }
-        public string? Message { get; set; }
-    }
+    public ResultCode ErrorCode { get; set; }
+    public string? Message { get; set; }
 }

@@ -1,8 +1,7 @@
-﻿namespace SMIJobXml.Model
+﻿namespace SMIJobHeader.Model;
+
+public class AppSettings
 {
-    public class AppSettings
-    {
-        public int EstimationTimeJobFinish { get; set; }
-        public int EstimationTimeJobConfig { get; set; }
-    }
+    public int EstimationTimeJobFinish { get; set; }
+    public int EstimationTimeJobConfig { get; set; }
 }

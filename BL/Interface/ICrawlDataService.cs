@@ -1,7 +1,6 @@
-﻿namespace SMIJobXml.BL.Interface
+﻿namespace SMIJobHeader.BL.Interface;
+
+public interface ICrawlDataService
 {
-    public interface ICrawlDataService
-    {
-        Task ReCheck();
-    }
+    Task ReCheck();
 }

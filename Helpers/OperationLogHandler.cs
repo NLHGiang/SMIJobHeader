@@ -1,10 +1,10 @@
-﻿namespace SMIJobXml.Helpers
+﻿namespace SMIJobHeader.Helpers;
+
+public class OperationLogHandler : DelegatingHandler
 {
-    public class OperationLogHandler : DelegatingHandler
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage requestMessage,
+        CancellationToken cancellationToken)
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage requestMessage, CancellationToken cancellationToken)
-        {
-            return base.SendAsync(requestMessage, cancellationToken);
-        }
+        return base.SendAsync(requestMessage, cancellationToken);
     }
 }

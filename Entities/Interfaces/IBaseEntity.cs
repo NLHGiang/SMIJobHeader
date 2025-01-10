@@ -1,7 +1,6 @@
-﻿namespace SMIJobXml.Entities.Interfaces
+﻿namespace SMIJobHeader.Entities.Interfaces;
+
+public interface IBaseEntity<T>
 {
-    public interface IBaseEntity<T>
-    {
-        T Id { get; set; }
-    }
+    T Id { get; set; }
 }

@@ -1,18 +1,15 @@
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
-using SMIJobXml.Helpers;
-using SMIJobXml.Model;
-using SMIJobXml.Model.Option;
-using SMIJobXml.ServiceExtension;
-using SMIJobXml.Storing;
-using SMIJobXml.Storing.Minio;
+using SMIJobHeader.Helpers;
+using SMIJobHeader.Model;
+using SMIJobHeader.Model.Option;
+using SMIJobHeader.ServiceExtension;
+using SMIJobHeader.Storing;
+using SMIJobHeader.Storing.Minio;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddWindowsService(options =>
-{
-    options.ServiceName = "SMIJobXml";
-});
+builder.Services.AddWindowsService(options => { options.ServiceName = "SMIJobXml"; });
 builder.Services.Configure<ObjectStorageOption>(builder.Configuration.GetSection("MinioOption"));
 builder.Services.AddScoped<IMinioHttpClient, MinioHttpClient>();
 builder.Services.AddScoped<IFileService, MinioService>();
@@ -20,8 +17,8 @@ builder.Services.AddIServicesScoped(builder.Configuration);
 //
 // Add services to the container.
 var _config = new ConfigurationBuilder()
-               .AddJsonFile(AppDomain.CurrentDomain.BaseDirectory + "serilog.config.json", true)
-               .Build();
+    .AddJsonFile(AppDomain.CurrentDomain.BaseDirectory + "serilog.config.json", true)
+    .Build();
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(_config, "Serilog")
@@ -31,19 +28,24 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Hangfire", LogEventLevel.Warning)
     .WriteTo.Logger(lc => lc
         .Filter.ByIncludingOnly(evt => evt.Level == LogEventLevel.Information)
-        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Information/information_.log", retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
+        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Information/information_.log",
+            retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
     .WriteTo.Logger(lc => lc
         .Filter.ByIncludingOnly(evt => evt.Level == LogEventLevel.Warning)
-        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Warning/warning_.log", retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
+        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Warning/warning_.log",
+            retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
     .WriteTo.Logger(lc => lc
         .Filter.ByIncludingOnly(evt => evt.Level == LogEventLevel.Error || evt.Level == LogEventLevel.Fatal)
-        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Error/error_.log", retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
+        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Error/error_.log",
+            retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
     .WriteTo.Logger(lc => lc
         .Filter.ByIncludingOnly(evt => evt.Level == LogEventLevel.Debug)
-        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Debug/debug_.log", retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
+        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Debug/debug_.log",
+            retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
     .WriteTo.Logger(lc => lc
         .Filter.ByIncludingOnly(evt => evt.Level == LogEventLevel.Verbose)
-        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Verbose/verbose_.log", retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
+        .WriteTo.File(new CompactJsonFormatter(), $"{AppContext.BaseDirectory}/Logs/Verbose/verbose_.log",
+            retainedFileCountLimit: 3, rollingInterval: RollingInterval.Day))
     .CreateLogger();
 
 

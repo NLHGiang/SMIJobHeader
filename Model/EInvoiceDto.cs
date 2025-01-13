@@ -2,10 +2,7 @@
 
 public class EInvoiceDto
 {
-    public string MasterKey { get; set; }
-    public string FromDate { get; set; }
-    public string ToDate { get; set; }
-    public string Type { get; set; }
+    public string? key { get; set; }
 
     public string khmshdon { get; set; } = "";
     public string khhdon { get; set; } = "";

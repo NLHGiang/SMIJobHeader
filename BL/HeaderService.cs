@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SMIJobHeader.BL.Interface;
 using SMIJobHeader.Common;
@@ -43,27 +44,69 @@ public class HeaderService : IHeaderService
         var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
         var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
 
+        List<invoiceheaders> listHeaders = new();
+
         foreach (var dto in eInvoiceDtos)
         {
-            (dto.nmmst, dto.nbmst) = crawlEInvoice.InvoiceType switch
-            {
-                EInvoiceCrawlConstants.PURCHASE => (crawlEInvoice.Username, dto.nbmst),
-                EInvoiceCrawlConstants.PURCHASE_SCO => (crawlEInvoice.Username, dto.nbmst),
-                EInvoiceCrawlConstants.SOLD => (dto.nmmst, crawlEInvoice.Username),
-                EInvoiceCrawlConstants.SOLD_SCO => (dto.nmmst, crawlEInvoice.Username),
-                _ => (dto.nmmst, dto.nbmst)
-            };
+            UpdateNmmstAndNbmst(dto, crawlEInvoice);
+            UpdateCrawlEInvoiceProperties(dto, crawlEInvoice);
 
-            crawlEInvoice.nbmst = dto.nbmst;
-            crawlEInvoice.khhdon = dto.khhdon;
-            crawlEInvoice.shdon = dto.shdon;
-            crawlEInvoice.khmshdon = dto.khmshdon;
-            crawlEInvoice.nmmst = dto.nmmst;
-            var result = _mapper.Map<EinvoiceHeader>(dto);
-            crawlEInvoice.Result = result.SerializeObjectToString();
+            dto.key = GenerateKey(crawlEInvoice);
 
-            //await PushQueueResultSMIHeader(data.SerializeObjectToString());
+            var header = _mapper.Map<invoiceheaders>(dto);
+            listHeaders.Add(header);
+
+            crawlEInvoice.Result = header.SerializeObjectToString();
+            // await PushQueueResultSMIHeader(data.SerializeObjectToString());
         }
+
+        await CreateRangeInvoiceHeader(listHeaders);
+    }
+
+    private void UpdateNmmstAndNbmst(EInvoiceDto dto, RetryCrawl crawlEInvoice)
+    {
+        (dto.nmmst, dto.nbmst) = crawlEInvoice.InvoiceType switch
+        {
+            EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.PURCHASE_SCO =>
+                (crawlEInvoice.Username, dto.nbmst),
+            EInvoiceCrawlConstants.SOLD or EInvoiceCrawlConstants.SOLD_SCO =>
+                (dto.nmmst, crawlEInvoice.Username),
+            _ => (dto.nmmst, dto.nbmst)
+        };
+    }
+
+    private void UpdateCrawlEInvoiceProperties(EInvoiceDto dto, RetryCrawl crawlEInvoice)
+    {
+        crawlEInvoice.nbmst = dto.nbmst;
+        crawlEInvoice.khhdon = dto.khhdon;
+        crawlEInvoice.shdon = dto.shdon;
+        crawlEInvoice.khmshdon = dto.khmshdon;
+        crawlEInvoice.nmmst = dto.nmmst;
+    }
+
+    private string GenerateKey(RetryCrawl crawlEInvoice)
+    {
+        var invoiceType = GetInvoiceType(crawlEInvoice.InvoiceType);
+
+        return $"{crawlEInvoice.User}_{crawlEInvoice.Account}_{invoiceType}_{crawlEInvoice.nbmst}-{crawlEInvoice.khmshdon}-{crawlEInvoice.khhdon}-{crawlEInvoice.shdon}";
+    }
+
+    private string GetInvoiceType(string invoiceType)
+    {
+        return invoiceType switch
+        {
+            EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.PURCHASE_SCO => "purchase",
+            EInvoiceCrawlConstants.SOLD or EInvoiceCrawlConstants.SOLD_SCO => "sold",
+            _ => string.Empty
+        };
+    }
+
+    private async Task CreateRangeInvoiceHeader(List<invoiceheaders> listHeaders)
+    {
+        if (listHeaders == null || !listHeaders.Any()) return;
+
+        var repo = _appUOW.GetRepository<invoiceheaders, ObjectId>();
+        await repo.InsertMany(listHeaders);
     }
 
     private async Task<List<EInvoiceDto>> ReadEInvoiceExcel(byte[] excelBytes, RetryCrawl retryCrawl)

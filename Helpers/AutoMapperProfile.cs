@@ -14,7 +14,7 @@ public class AutoMapperProfile : Profile
     {
         CreateMap<MessageLogDto, MessageLog>();
         CreateMap<PropertyConfig, ExcelColumnConfig>();
-        CreateMap<EInvoiceDto, EinvoiceHeader>()
+        CreateMap<EInvoiceDto, invoiceheaders>()
             .ForMember(dest => dest.tdlap, opt => opt.MapFrom(src => ParseDate(src.nlap)));
     }
 

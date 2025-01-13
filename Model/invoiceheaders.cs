@@ -1,9 +1,18 @@
-﻿using SMIJobHeader.Entities;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.IdGenerators;
+using SMIJobHeader.Entities;
+using SMIJobHeader.Entities.Interfaces;
 
 namespace SMIJobHeader.Model;
 
-public class EinvoiceHeader
+[BsonIgnoreExtraElements]
+public class invoiceheaders : IBaseEntity<ObjectId>
 {
+    public string? key { get; set; }
+    public DateTime? createTime { get; set; } = DateTime.Now;
+    public DateTime? run_crawl_detail { get; set; }
+
     public string? nbmst { get; set; } = "0309861244";
     public object? khmshdon { get; set; } = 1;
     public string? khhdon { get; set; } = "K24TBN";
@@ -134,4 +143,7 @@ public class EinvoiceHeader
     public object? hdtbssrses { get; set; }
     public object? hdTrung { get; set; }
     public object? isHDTrung { get; set; }
+
+    [BsonId(IdGenerator = typeof(ObjectIdGenerator))]
+    public ObjectId Id { get; set; }
 }

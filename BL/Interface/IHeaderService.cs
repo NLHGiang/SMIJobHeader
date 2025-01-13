@@ -2,5 +2,5 @@
 
 public interface IHeaderService
 {
-    Task DispenseXmlMessage(string messageLog);
+    Task DispenseHeaderMessage(string messageLog);
 }

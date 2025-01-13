@@ -1,6 +1,8 @@
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using SMIJobHeader.BL;
+using SMIJobHeader.BL.Interface;
 using SMIJobHeader.Helpers;
 using SMIJobHeader.Model;
 using SMIJobHeader.Model.Option;
@@ -9,10 +11,11 @@ using SMIJobHeader.Storing;
 using SMIJobHeader.Storing.Minio;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddWindowsService(options => { options.ServiceName = "SMIJobXml"; });
+builder.Services.AddWindowsService(options => { options.ServiceName = "SMIJobHeader"; });
 builder.Services.Configure<ObjectStorageOption>(builder.Configuration.GetSection("MinioOption"));
 builder.Services.AddScoped<IMinioHttpClient, MinioHttpClient>();
 builder.Services.AddScoped<IFileService, MinioService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddIServicesScoped(builder.Configuration);
 //
 // Add services to the container.

@@ -12,7 +12,7 @@ public class RabbitETLService : IRabbitETLService
 
     public RabbitETLService(IOptions<ETLOption> options)
     {
-        _options = options.Value.RabbitXMLOption;
+        _options = options.Value.RabbitHeaderOption;
         var factory = new ConnectionFactory
         {
             UserName = _options.UserName,

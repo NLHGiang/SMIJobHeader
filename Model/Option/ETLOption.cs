@@ -4,5 +4,5 @@ namespace SMIJobHeader.Model.Option;
 
 public class ETLOption
 {
-    public RabbitOption RabbitXMLOption { get; set; }
+    public RabbitOption RabbitHeaderOption { get; set; }
 }

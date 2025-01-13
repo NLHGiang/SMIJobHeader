@@ -11,7 +11,7 @@ public class CSMSaveHeaderService : ICSMSaveHeaderService, IDisposable
     private readonly ILogger<CSMSaveHeaderService> _logger;
     private readonly IHeaderService _logService;
     private readonly IModel _model;
-    private readonly string? _queueName = "invoice-raw-xml";
+    private readonly string? _queueName = "invoice-raw-excel";
 
     public CSMSaveHeaderService(
         IRabbitETLService rabbitMqService,
@@ -39,7 +39,7 @@ public class CSMSaveHeaderService : ICSMSaveHeaderService, IDisposable
             try
             {
                 var body = ea.Body.ToArray().ConvertBytesToString();
-                await _logService.DispenseXmlMessage(body);
+                await _logService.DispenseHeaderMessage(body);
                 _model.BasicAck(ea.DeliveryTag, true);
             }
             catch (Exception ex)

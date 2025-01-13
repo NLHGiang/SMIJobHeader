@@ -1,13 +1,16 @@
-﻿using System.IO.Compression;
-using MongoDB.Bson;
+﻿using AutoMapper;
 using MongoDB.Driver;
 using SMIJobHeader.BL.Interface;
+using SMIJobHeader.Common;
+using SMIJobHeader.Common.Excel;
 using SMIJobHeader.Constants;
 using SMIJobHeader.DBAccessor.Interface.Repositories;
-using SMIJobHeader.Entities;
 using SMIJobHeader.Extensions;
+using SMIJobHeader.Model;
 using SMIJobHeader.Model.CrawlData;
+using SMIJobHeader.Model.Excel;
 using SMIJobHeader.Storing;
+using static SMIJobHeader.Constants.MinioConstants;
 
 namespace SMIJobHeader.BL;
 
@@ -15,160 +18,90 @@ public class HeaderService : IHeaderService
 {
     private readonly IAppUnitOfWork _appUOW;
     private readonly IFileService _fileService;
+    private readonly IConfigService _configService;
+    private readonly IMapper _mapper;
     private readonly ILogger<HeaderService> _logger;
 
     public HeaderService(ILogger<HeaderService> logger,
         IAppUnitOfWork appUOW,
-        IFileService fileService
+        IFileService fileService,
+        IConfigService configService,
+        IMapper mapper
     )
     {
-        _logger = logger;
-        _fileService = fileService;
         _appUOW = appUOW;
+        _fileService = fileService;
+        _configService = configService;
+        _mapper = mapper;
+        _logger = logger;
     }
 
-    public async Task DispenseXmlMessage(string messageLog)
+    public async Task DispenseHeaderMessage(string messageLog)
     {
-        var data = messageLog.DeserializeObject<RetryCrawl>();
-        var zipBytes = Convert.FromBase64String(data.Result);
-        var xmlBytes = GetXMLBytes(zipBytes);
-        var invoiceraw = await GetInvoiceraws(data, xmlBytes);
-        var invoiceXML = await SaveInvoiceXMl(data, invoiceraw, xmlBytes);
-        await UpdateInvoiceraw(invoiceXML);
-    }
+        var crawlEInvoice = messageLog.DeserializeObject<RetryCrawl>();
 
-    private static byte[]? GetXMLBytes(byte[] zipBytes)
-    {
-        try
+        var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
+        var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
+
+        foreach (var dto in eInvoiceDtos)
         {
-            using (var zipStream = new MemoryStream(zipBytes))
-            using (var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Read))
+            (dto.nmmst, dto.nbmst) = crawlEInvoice.InvoiceType switch
             {
-                foreach (var entry in zipArchive.Entries)
-                {
-                    if (!entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)) continue;
-
-                    using (var xmlStream = entry.Open())
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        xmlStream.CopyTo(memoryStream);
-                        var xmlBytes = memoryStream.ToArray();
-                        return xmlBytes;
-                    }
-                }
-            }
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-
-        return null;
-    }
-
-    private async Task<invoiceraws?> GetInvoiceraws(RetryCrawl crawlEInvoice, byte[]? xmlBytes)
-    {
-        var eInvoice = await GetEInvoiceAsync(crawlEInvoice);
-        if (eInvoice == null) return null;
-        if (eInvoice.xml != null) return null;
-
-        eInvoice.assets.xml.running = false;
-        eInvoice.assets.xml.ran = DateTime.Now;
-        var taxCode = crawlEInvoice.InvoiceType.Contains(EInvoiceCrawlConstants.PURCHASE)
-            ? eInvoice.data.nmmst
-            : eInvoice.keys.nbmst;
-        var hasXML = xmlBytes != null;
-        eInvoice.assets.xml.done = hasXML;
-        eInvoice.assets.xml.run =
-            hasXML ? eInvoice.assets.xml.run : DateTime.Now.AddMinutes(crawlEInvoice.MinutesAppendCrawlError);
-        eInvoice.assets.xml.error_count =
-            hasXML ? eInvoice.assets.xml.error_count : eInvoice.assets.xml.error_count + 1;
-
-        eInvoice.xml = null;
-        if (hasXML)
-        {
-            eInvoice.xml = new Xml();
-            var bucketTime = eInvoice.data.tdlap.FormatDate("yyyyMM");
-            if (bucketTime.IsNullOrEmpty()) DateTimeExtensions.WriteLogError(eInvoice.SerializeToJson());
-            eInvoice.xml.bucketName = hasXML ? $"msmi-{bucketTime}-{taxCode}" : string.Empty;
-            eInvoice.xml.pathName =
-                hasXML
-                    ? $"{crawlEInvoice.InvoiceType}/query/{eInvoice.keys.nbmst}-{eInvoice.keys.khhdon}-{eInvoice.keys.khmshdon}-{eInvoice.keys.shdon}{FileExtension.XML}"
-                    : string.Empty;
-        }
-
-        return eInvoice;
-    }
-
-    private async Task<invoiceraws?> GetEInvoiceAsync(RetryCrawl crawlEInvoice)
-    {
-        try
-        {
-            var repo = _appUOW.GetRepository<invoiceraws, ObjectId>();
-            var invoiceType = crawlEInvoice.InvoiceType switch
-            {
-                EInvoiceCrawlConstants.PURCHASE => "purchase",
-                EInvoiceCrawlConstants.PURCHASE_SCO => "purchase",
-                EInvoiceCrawlConstants.SOLD => "sold",
-                EInvoiceCrawlConstants.SOLD_SCO => "sold",
-                _ => string.Empty
+                EInvoiceCrawlConstants.PURCHASE => (crawlEInvoice.Username, dto.nbmst),
+                EInvoiceCrawlConstants.PURCHASE_SCO => (crawlEInvoice.Username, dto.nbmst),
+                EInvoiceCrawlConstants.SOLD => (dto.nmmst, crawlEInvoice.Username),
+                EInvoiceCrawlConstants.SOLD_SCO => (dto.nmmst, crawlEInvoice.Username),
+                _ => (dto.nmmst, dto.nbmst)
             };
 
-            var keySearch =
-                $"{crawlEInvoice.User}_{crawlEInvoice.Account}_{invoiceType}_{crawlEInvoice.nbmst}-{crawlEInvoice.khmshdon}-{crawlEInvoice.khhdon}-{crawlEInvoice.shdon}";
+            crawlEInvoice.nbmst = dto.nbmst;
+            crawlEInvoice.khhdon = dto.khhdon;
+            crawlEInvoice.shdon = dto.shdon;
+            crawlEInvoice.khmshdon = dto.khmshdon;
+            crawlEInvoice.nmmst = dto.nmmst;
+            var result = _mapper.Map<EinvoiceHeader>(dto);
+            crawlEInvoice.Result = result.SerializeObjectToString();
 
-            var result = await repo.Get(
-                Builders<invoiceraws>.Filter.Eq(e => e.key, keySearch));
-            return result;
+            //await PushQueueResultSMIHeader(data.SerializeObjectToString());
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-
-        return null;
     }
 
-    private async Task<invoiceraws?> SaveInvoiceXMl(RetryCrawl crawlEInvoice, invoiceraws? invoiceraws,
-        byte[]? xmlBytes)
+    private async Task<List<EInvoiceDto>> ReadEInvoiceExcel(byte[] excelBytes, RetryCrawl retryCrawl)
     {
-        if (invoiceraws == null) return null;
-        if (xmlBytes == null) return invoiceraws;
+        List<EInvoiceDto> eInvoiceDtos = new();
         try
         {
-            await _fileService.UploadAsync(invoiceraws.xml.bucketName, invoiceraws.xml.pathName, xmlBytes);
+            using (var streamData = new MemoryStream())
+            {
+                await streamData.WriteAsync(excelBytes, 0, excelBytes.Length);
+                streamData.Position = 0;
+                var excelConfig = await GetConfigColumnImport(RequestType.EINVOICE);
+                eInvoiceDtos = await MapExcel.ReadExcel<EInvoiceDto>(streamData, excelConfig, 2, 6);
+            }
         }
         catch (Exception ex)
         {
-            invoiceraws.assets.xml.running = false;
-            invoiceraws.assets.xml.done = false;
-            invoiceraws.assets.xml.run = DateTime.Now.AddMinutes(crawlEInvoice.MinutesAppendCrawlError);
-            invoiceraws.assets.xml.ran = DateTime.Now;
-            invoiceraws.xml = null;
-            invoiceraws.assets.xml.error_count++;
-            _logger.LogError(ex.Message);
+            _logger.LogError($"[ReadEInvoiceExcel-EInvoice] {ex.Message}");
         }
 
-        return invoiceraws;
+        return eInvoiceDtos.Skip(1).ToList();
     }
 
-    private async Task UpdateInvoiceraw(invoiceraws? item)
+    private async Task<Dictionary<string, ExcelColumnConfig>> GetConfigColumnImport(string excelConfigType,
+    bool isExport = false)
     {
-        if (item == null) return;
+        var excelConfig = await _configService.GetConfigAsync(excelConfigType, "excel");
+        var excelColumnConfig = _mapper.Map<List<ExcelColumnConfig>>(excelConfig);
+        if (excelColumnConfig == null || excelColumnConfig == null || !excelColumnConfig.Any())
+            throw new BusinessLogicException(ResultCode.DataInvalid, "Dữ liệu không hợp lệ hoặc null");
+        var result = new Dictionary<string, ExcelColumnConfig>();
+        foreach (var objectProperty in excelColumnConfig)
+        {
+            if (objectProperty.Lable.IsNullOrEmpty() || result.ContainsKey(objectProperty.Lable)) continue;
+            if (!isExport && (objectProperty.IsExport ?? false)) continue;
+            result.Add(objectProperty.Lable, objectProperty);
+        }
 
-        var repo = _appUOW.GetRepository<invoiceraws, ObjectId>();
-        var filter = Builders<invoiceraws>.Filter.Eq(x => x.Id, item.Id);
-
-        var update = Builders<invoiceraws>.Update
-            .Set(x => x.assets.xml.running, item.assets.xml.running)
-            .Set(x => x.assets.xml.run_count, item.assets.xml.run_count)
-            .Set(x => x.assets.xml.error_count, item.assets.xml.error_count)
-            .Set(x => x.assets.xml.done, item.assets.xml.done)
-            .Set(x => x.assets.xml.run, item.assets.xml.run)
-            .Set(x => x.assets.xml.ran, item.assets.xml.ran);
-
-        if (item.xml != null) update = update.Set(x => x.xml, item.xml);
-
-        await repo.UpdateAsync(filter, update);
+        return result;
     }
 }

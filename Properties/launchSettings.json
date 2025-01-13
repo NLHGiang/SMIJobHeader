@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "SMIJobXml": {
+    "SMIJobHeader": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "swagger",

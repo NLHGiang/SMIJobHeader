@@ -137,7 +137,9 @@ public class HeaderService : IHeaderService
         }
         catch (Exception ex)
         {
-            _logger.LogError($"[ReadEInvoiceExcel-EInvoice] {ex.Message}");
+            var base64String = Convert.ToBase64String(excelBytes);
+            _logger.LogError($"[ReadEInvoiceExcel-EInvoice] {ex.Message}\n" +
+                base64String);
         }
 
         return eInvoiceDtos.Skip(1).ToList();

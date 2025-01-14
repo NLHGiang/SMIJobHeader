@@ -12,6 +12,13 @@ public class invoiceheaders : IBaseEntity<ObjectId>
     public string? key { get; set; }
     public DateTime? createTime { get; set; } = DateTime.Now;
     public DateTime? run_crawl_detail { get; set; }
+    public object? detail { get; set; } = null;
+    public bool? done { get; set; } = false;
+
+    public ObjectId user { get; set; }
+    public ObjectId account { get; set; }
+    public string? from { get; set; }
+    public string? type { get; set; }
 
     public string? nbmst { get; set; } = "0309861244";
     public object? khmshdon { get; set; } = 1;

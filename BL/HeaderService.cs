@@ -54,6 +54,19 @@ public class HeaderService : IHeaderService
             dto.key = GenerateKey(crawlEInvoice);
 
             var header = _mapper.Map<invoiceheaders>(dto);
+            header.user = new ObjectId(crawlEInvoice.User);
+            header.account = new ObjectId(crawlEInvoice.Account);
+            header.from = crawlEInvoice.InvoiceType switch
+            {
+                EInvoiceCrawlConstants.PURCHASE_SCO or EInvoiceCrawlConstants.SOLD_SCO => "sco-query",
+                EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.SOLD => "query"
+            };
+            header.type = crawlEInvoice.InvoiceType switch
+            {
+                EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.PURCHASE_SCO => "purchase",
+                EInvoiceCrawlConstants.SOLD or EInvoiceCrawlConstants.SOLD_SCO => "sold"
+            };
+
             listHeaders.Add(header);
 
             crawlEInvoice.Result = header.SerializeObjectToString();

@@ -27,7 +27,6 @@ public static class ServiceExtension
         services.AddSingleton<ICSMSaveHeaderService, CSMSaveHeaderService>();
         services.AddSingleton<IRabbitETLService, RabbitETLService>();
 
-
         services.AddSingleton<RedisCacheService>();
         services.AddHostedService<WorkerSaveHeader>();
         return services;

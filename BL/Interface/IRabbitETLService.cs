@@ -1,10 +1,10 @@
 ﻿using RabbitMQ.Client;
-using SMIJobHeader.Model.RabbitMQ;
+using SMIJobHeader.RabbitMQ;
 
 namespace SMIJobHeader.BL.Interface;
 
 public interface IRabbitETLService
 {
     IConnection Connection { get; }
-    RabbitOption GetConfig();
+    RabbitMQOption GetConfig();
 }

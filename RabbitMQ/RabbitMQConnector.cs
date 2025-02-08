@@ -1,18 +1,16 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using SMIJobHeader.BL.Interface;
-using SMIJobHeader.Model.Option;
-using SMIJobHeader.RabbitMQ;
 
-namespace SMIJobHeader.BL;
+namespace SMIJobHeader.RabbitMQ;
 
-public class RabbitETLService : IRabbitETLService
+public class RabbitMQConnector : IRabbitMQConnector
 {
     private readonly RabbitMQOption _options;
 
-    public RabbitETLService(IOptions<ETLOption> options)
+    public RabbitMQConnector(
+        IOptions<RabbitMQOption> options)
     {
-        _options = options.Value.RabbitHeaderOption;
+        _options = options.Value;
         var factory = new ConnectionFactory
         {
             UserName = _options.UserName,
@@ -26,9 +24,4 @@ public class RabbitETLService : IRabbitETLService
     }
 
     public IConnection Connection { get; }
-
-    public RabbitMQOption GetConfig()
-    {
-        return _options;
-    }
 }

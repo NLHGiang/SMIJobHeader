@@ -1,8 +1,8 @@
-﻿using SMIJobHeader.Model.RabbitMQ;
+﻿using SMIJobHeader.RabbitMQ;
 
 namespace SMIJobHeader.Model.Option;
 
 public class ETLOption
 {
-    public RabbitOption RabbitHeaderOption { get; set; }
+    public RabbitMQOption RabbitHeaderOption { get; set; }
 }

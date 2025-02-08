@@ -10,6 +10,7 @@ using SMIJobHeader.Extensions;
 using SMIJobHeader.Model;
 using SMIJobHeader.Model.CrawlData;
 using SMIJobHeader.Model.Excel;
+using SMIJobHeader.RabbitMQ;
 using SMIJobHeader.Storing;
 using static SMIJobHeader.Constants.MinioConstants;
 
@@ -20,19 +21,23 @@ public class HeaderService : IHeaderService
     private readonly IAppUnitOfWork _appUOW;
     private readonly IFileService _fileService;
     private readonly IConfigService _configService;
+    private readonly IDistributedEventProducer _producer;
     private readonly IMapper _mapper;
     private readonly ILogger<HeaderService> _logger;
 
-    public HeaderService(ILogger<HeaderService> logger,
+    public HeaderService(
         IAppUnitOfWork appUOW,
-        IFileService fileService,
         IConfigService configService,
-        IMapper mapper
+        IDistributedEventProducer producer,
+        IFileService fileService,
+        IMapper mapper,
+        ILogger<HeaderService> logger
     )
     {
         _appUOW = appUOW;
-        _fileService = fileService;
         _configService = configService;
+        _producer = producer;
+        _fileService = fileService;
         _mapper = mapper;
         _logger = logger;
     }
@@ -70,7 +75,7 @@ public class HeaderService : IHeaderService
             listHeaders.Add(header);
 
             crawlEInvoice.Result = header.SerializeObjectToString();
-            // await PushQueueResultSMIHeader(data.SerializeObjectToString());
+            await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
         }
 
         await CreateRangeInvoiceHeader(listHeaders);
@@ -161,5 +166,14 @@ public class HeaderService : IHeaderService
         }
 
         return result;
+    }
+
+    private async Task PushQueueResultSMIHeader(string result, bool isProduct = true)
+    {
+        await (isProduct ?
+          _producer.PublishMesageAsync(result, "invoice-raw-header", "crawl-invoice-raw",
+              "response-invoice-raw-header.*") :
+          _producer.PublishMesageAsync(result, "invoice-raw-header-test", "crawl-invoice-raw",
+              "response-invoice-raw-header-test.*"));
     }
 }

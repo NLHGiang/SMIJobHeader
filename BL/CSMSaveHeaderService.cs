@@ -19,13 +19,13 @@ public class CSMSaveHeaderService : ICSMSaveHeaderService, IDisposable
         ILogger<CSMSaveHeaderService> logger)
     {
         _connection = rabbitMqService.Connection;
-        var rabbitOption = rabbitMqService.GetConfig();
-        _queueName = rabbitOption?.QueueName;
+        var RabbitMQOption = rabbitMqService.GetConfig();
+        _queueName = RabbitMQOption?.QueueName;
         _model = _connection.CreateModel();
         _model.BasicQos(0, 1, false);
         _model.QueueDeclare(_queueName, exclusive: false, autoDelete: false, durable: true);
-        _model.ExchangeDeclare(rabbitOption?.Exchange, ExchangeType.Topic, autoDelete: false, durable: true);
-        _model.QueueBind(_queueName, rabbitOption?.Exchange, rabbitOption?.RoutingKey);
+        _model.ExchangeDeclare(RabbitMQOption?.Exchange, ExchangeType.Topic, autoDelete: false, durable: true);
+        _model.QueueBind(_queueName, RabbitMQOption?.Exchange, RabbitMQOption?.RoutingKey);
         _logService = logService;
         _logger = logger;
     }

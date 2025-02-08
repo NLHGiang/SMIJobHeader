@@ -20,6 +20,14 @@ public static class EInvoiceCrawlConstants
     public static readonly List<string> CrawlTypes = new() { DETAIL, XML };
 }
 
+public static class EInvoiceLogCrawlConstants
+{
+    public const string PURCHASE = "sync_invoices_purchase";
+    public const string SOLD = "sync_invoices_sold";
+    public const string PURCHASE_SCO = "sync_invoices_purchase_sco";
+    public const string SOLD_SCO = "sync_invoices_sold_sco";
+}
+
 public static class FileExtension
 {
     public const string PDF = ".pdf";

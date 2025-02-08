@@ -4,6 +4,7 @@ using SMIJobHeader.BL.Interface;
 using SMIJobHeader.DBAccessor;
 using SMIJobHeader.DBAccessor.Interface.Repositories;
 using SMIJobHeader.Model.Option;
+using SMIJobHeader.RabbitMQ;
 
 namespace SMIJobHeader.ServiceExtension;
 
@@ -26,6 +27,20 @@ public static class ServiceExtension
         services.AddSingleton<IHeaderService, HeaderService>();
         services.AddSingleton<ICSMSaveHeaderService, CSMSaveHeaderService>();
         services.AddSingleton<IRabbitETLService, RabbitETLService>();
+
+        var options = new RabbitMQOption();
+        configuration.GetSection("ETLOption:RabbitHeaderOption").Bind(options);
+
+        services.Configure<RabbitMQOption>(config =>
+        {
+            config.Hosts = options.Hosts;
+            config.Password = options.Password;
+            config.UserName = options.UserName;
+            config.VirtualHost = options.VirtualHost;
+        });
+
+        services.AddSingleton<IRabbitMQConnector, RabbitMQConnector>();
+        services.AddSingleton<IDistributedEventProducer, BaseEventProducer>();
 
         services.AddSingleton<RedisCacheService>();
         services.AddHostedService<WorkerSaveHeader>();

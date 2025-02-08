@@ -2,7 +2,7 @@
 
 namespace SMIJobHeader.Model.CrawlData;
 
-public class RetryCrawl
+public class CrawlEInvoice
 {
     [JsonProperty("user")] public string User { get; set; }
 

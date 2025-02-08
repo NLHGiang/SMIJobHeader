@@ -44,14 +44,18 @@ public class HeaderService : IHeaderService
 
     public async Task DispenseHeaderMessage(string messageLog)
     {
-        var crawlEInvoice = messageLog.DeserializeObject<RetryCrawl>();
+        var crawlEInvoice = messageLog.DeserializeObject<CrawlEInvoice>();
+        var isSuccess = true;
+        var errorMessage = string.Empty;
 
         var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
         var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
 
+        List<EInvoiceDto> listHeadersSynced = eInvoiceDtos;
+
         List<invoiceheaders> listHeaders = new();
 
-        foreach (var dto in eInvoiceDtos)
+        foreach (var dto in listHeadersSynced)
         {
             UpdateNmmstAndNbmst(dto, crawlEInvoice);
             UpdateCrawlEInvoiceProperties(dto, crawlEInvoice);
@@ -79,9 +83,13 @@ public class HeaderService : IHeaderService
         }
 
         await CreateRangeInvoiceHeader(listHeaders);
+
+        var logCrawl = new LogCrawlDTO();
+        logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, listHeaders.Count);
+        await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
     }
 
-    private void UpdateNmmstAndNbmst(EInvoiceDto dto, RetryCrawl crawlEInvoice)
+    private void UpdateNmmstAndNbmst(EInvoiceDto dto, CrawlEInvoice crawlEInvoice)
     {
         (dto.nmmst, dto.nbmst) = crawlEInvoice.InvoiceType switch
         {
@@ -93,7 +101,7 @@ public class HeaderService : IHeaderService
         };
     }
 
-    private void UpdateCrawlEInvoiceProperties(EInvoiceDto dto, RetryCrawl crawlEInvoice)
+    private void UpdateCrawlEInvoiceProperties(EInvoiceDto dto, CrawlEInvoice crawlEInvoice)
     {
         crawlEInvoice.nbmst = dto.nbmst;
         crawlEInvoice.khhdon = dto.khhdon;
@@ -102,7 +110,7 @@ public class HeaderService : IHeaderService
         crawlEInvoice.nmmst = dto.nmmst;
     }
 
-    private string GenerateKey(RetryCrawl crawlEInvoice)
+    private string GenerateKey(CrawlEInvoice crawlEInvoice)
     {
         var invoiceType = GetInvoiceType(crawlEInvoice.InvoiceType);
 
@@ -127,7 +135,7 @@ public class HeaderService : IHeaderService
         await repo.InsertMany(listHeaders);
     }
 
-    private async Task<List<EInvoiceDto>> ReadEInvoiceExcel(byte[] excelBytes, RetryCrawl retryCrawl)
+    private async Task<List<EInvoiceDto>> ReadEInvoiceExcel(byte[] excelBytes, CrawlEInvoice retryCrawl)
     {
         List<EInvoiceDto> eInvoiceDtos = new();
         try
@@ -175,5 +183,14 @@ public class HeaderService : IHeaderService
               "response-invoice-raw-header.*") :
           _producer.PublishMesageAsync(result, "invoice-raw-header-test", "crawl-invoice-raw",
               "response-invoice-raw-header-test.*"));
+    }
+
+    private async Task PushQueueResultSMILogCrawl(string result, bool isProduct = true)
+    {
+        await (isProduct ?
+          _producer.PublishMesageAsync(result, "invoice-raw-log-crawl", "crawl-invoice-raw",
+              "response-invoice-raw-log-crawl.*") :
+          _producer.PublishMesageAsync(result, "invoice-raw-log-crawl-test", "crawl-invoice-raw",
+              "response-invoice-raw-log-crawl-test.*"));
     }
 }

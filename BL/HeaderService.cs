@@ -48,6 +48,8 @@ public class HeaderService : IHeaderService
         var isSuccess = true;
         var errorMessage = string.Empty;
 
+        if (crawlEInvoice.Result.IsNullOrEmpty()) errorMessage = "Response is null or empty";
+
         var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
         var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
 

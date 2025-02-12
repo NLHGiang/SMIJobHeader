@@ -193,8 +193,8 @@ public class HeaderService : IHeaderService
     private async Task PushQueueResultSMILogCrawl(string result, bool isProduct = true)
     {
         await (isProduct ?
-            _producer.PublishMesageAsync(result, "invoice-raw-header", "crawl-invoice-raw",
-                "response-invoice-raw-header.*") :
+            _producer.PublishMesageAsync(result, "invoice-raw-log-crawl-test", "crawl-invoice-raw",
+                "response-invoice-raw-log-crawl-test.*") :
             _producer.PublishMesageAsync(result, "invoice-raw-log-crawl", "crawl-invoice-raw",
                 "response-invoice-raw-log-crawl.*"));
     }

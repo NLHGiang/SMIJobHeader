@@ -1,6 +1,5 @@
 ﻿namespace SMIJobHeader.Model;
 
-using MongoDB.Bson;
 using SMIJobHeader.Constants;
 using SMIJobHeader.Model.CrawlData;
 using System;
@@ -8,8 +7,8 @@ using System.Collections.Generic;
 
 public class LogCrawlDTO
 {
-    public ObjectId user { get; set; }
-    public ObjectId account { get; set; }
+    public string? user { get; set; }
+    public string? account { get; set; }
     public string? type { get; set; }
     public string? status { get; set; }
     public string? account_username { get; set; }
@@ -26,6 +25,9 @@ public class LogCrawlDTO
 
     public void BuildLogCrawl(CrawlEInvoice crawlEInvoice, bool isSuccess, string errorMessage, int totalRecord, int syncedRecord, int createdRecord)
     {
+        user = crawlEInvoice.User;
+        account = crawlEInvoice.Account;
+        account_username = crawlEInvoice.Username;
         SetType(crawlEInvoice);
         SetStatusAndDescription(isSuccess, errorMessage);
         SetGeLe(crawlEInvoice);

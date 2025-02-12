@@ -53,7 +53,10 @@ public class HeaderService : IHeaderService
         var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
         var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
 
-        List<EInvoiceDto> listHeadersSynced = eInvoiceDtos;
+        var syncTTXLys = new[] { 5, 6, 8 };
+        List<EInvoiceDto> listHeadersSynced = eInvoiceDtos
+            .Where(c => syncTTXLys.Contains(c.ttxly))
+            .ToList();
 
         List<invoiceheaders> listHeaders = new();
 

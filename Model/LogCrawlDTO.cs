@@ -3,7 +3,7 @@
 using SMIJobHeader.Constants;
 using SMIJobHeader.Model.CrawlData;
 using System;
-using System.Collections.Generic;
+using System.Globalization;
 
 public class LogCrawlDTO
 {
@@ -16,18 +16,19 @@ public class LogCrawlDTO
     public string? error_message { get; set; }
     public string? ge { get; set; }
     public string? le { get; set; }
-    public Latency? latency { get; set; }
+    public object? latency { get; set; }
     public DateTime created_date { get; set; }
     public int __v { get; set; }
-    public int total { get; set; }
-    public int synced { get; set; }
-    public int created { get; set; }
+    public int? total { get; set; }
+    public int? synced { get; set; }
+    public int? created { get; set; }
 
-    public void BuildLogCrawl(CrawlEInvoice crawlEInvoice, bool isSuccess, string errorMessage, int totalRecord, int syncedRecord, int createdRecord)
+    public void BuildLogCrawl(CrawlEInvoice crawlEInvoice, bool isSuccess, string errorMessage, int? totalRecord = null, int? syncedRecord = null, int? createdRecord = null)
     {
         user = crawlEInvoice.User;
         account = crawlEInvoice.Account;
         account_username = crawlEInvoice.Username;
+        created_date = DateTime.Now;
         SetType(crawlEInvoice);
         SetStatusAndDescription(isSuccess, errorMessage);
         SetGeLe(crawlEInvoice);
@@ -55,20 +56,24 @@ public class LogCrawlDTO
 
     private void SetGeLe(CrawlEInvoice crawlEInvoice)
     {
-        ge = crawlEInvoice.FromDate;
-        le = crawlEInvoice.ToDate;
+        var format = "dd/MM/yyyyTHH:mm:ss";
+        var provider = CultureInfo.InvariantCulture;
+
+        if (DateTime.TryParseExact(crawlEInvoice.FromDate, format, provider, DateTimeStyles.None, out DateTime geParsedDate))
+        {
+            ge = geParsedDate.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
+
+        if (DateTime.TryParseExact(crawlEInvoice.ToDate, format, provider, DateTimeStyles.None, out DateTime leParsedDate))
+        {
+            le = leParsedDate.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
     }
 
-    private void SetResultCrawl(int totalRecord, int syncedRecord, int createdRecord)
+    private void SetResultCrawl(int? totalRecord, int? syncedRecord, int? createdRecord)
     {
         total = totalRecord;
         synced = syncedRecord;
         created = createdRecord;
     }
-}
-
-public class Latency
-{
-    public List<int> latency_sync { get; set; }
-    public int total { get; set; }
 }

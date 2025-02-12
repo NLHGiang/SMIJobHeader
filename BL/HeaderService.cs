@@ -45,10 +45,18 @@ public class HeaderService : IHeaderService
     public async Task DispenseHeaderMessage(string messageLog)
     {
         var crawlEInvoice = messageLog.DeserializeObject<CrawlEInvoice>();
+        var logCrawl = new LogCrawlDTO();
         var isSuccess = true;
         var errorMessage = string.Empty;
 
-        if (crawlEInvoice.Result.IsNullOrEmpty()) errorMessage = "Response is null or empty";
+        if (crawlEInvoice.Result.IsNullOrEmpty())
+        {
+            isSuccess = false;
+            errorMessage = "Response is null or empty";
+            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage);
+            await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
+            return;
+        }
 
         var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
         var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
@@ -67,20 +75,10 @@ public class HeaderService : IHeaderService
 
             dto.key = GenerateKey(crawlEInvoice);
 
-            var header = _mapper.Map<invoiceheaders>(dto);
-            header.user = new ObjectId(crawlEInvoice.User);
-            header.account = new ObjectId(crawlEInvoice.Account);
-            header.from = crawlEInvoice.InvoiceType switch
-            {
-                EInvoiceCrawlConstants.PURCHASE_SCO or EInvoiceCrawlConstants.SOLD_SCO => "sco-query",
-                EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.SOLD => "query"
-            };
-            header.type = crawlEInvoice.InvoiceType switch
-            {
-                EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.PURCHASE_SCO => "purchase",
-                EInvoiceCrawlConstants.SOLD or EInvoiceCrawlConstants.SOLD_SCO => "sold"
-            };
+            var isExisted = await CheckExistedInvoiceHeader(dto);
+            if (isExisted) continue;
 
+            invoiceheaders header = GetInvoiceHeader(crawlEInvoice, dto);
             listHeaders.Add(header);
 
             crawlEInvoice.Result = header.SerializeObjectToString();
@@ -89,9 +87,37 @@ public class HeaderService : IHeaderService
 
         await CreateRangeInvoiceHeader(listHeaders);
 
-        var logCrawl = new LogCrawlDTO();
         logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, listHeaders.Count);
         await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
+    }
+
+    private async Task<bool> CheckExistedInvoiceHeader(EInvoiceDto dto)
+    {
+        var repo = _appUOW.GetRepository<invoiceheaders, ObjectId>();
+        var exsitedHeaders = await repo.Get(Builders<invoiceheaders>.Filter.And
+        (
+            Builders<invoiceheaders>.Filter.Eq(c => c.key, dto.key)
+        ));
+
+        return exsitedHeaders != null;
+    }
+
+    private invoiceheaders GetInvoiceHeader(CrawlEInvoice crawlEInvoice, EInvoiceDto dto)
+    {
+        var header = _mapper.Map<invoiceheaders>(dto);
+        header.user = new ObjectId(crawlEInvoice.User);
+        header.account = new ObjectId(crawlEInvoice.Account);
+        header.from = crawlEInvoice.InvoiceType switch
+        {
+            EInvoiceCrawlConstants.PURCHASE_SCO or EInvoiceCrawlConstants.SOLD_SCO => "sco-query",
+            EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.SOLD => "query"
+        };
+        header.type = crawlEInvoice.InvoiceType switch
+        {
+            EInvoiceCrawlConstants.PURCHASE or EInvoiceCrawlConstants.PURCHASE_SCO => "purchase",
+            EInvoiceCrawlConstants.SOLD or EInvoiceCrawlConstants.SOLD_SCO => "sold"
+        };
+        return header;
     }
 
     private void UpdateNmmstAndNbmst(EInvoiceDto dto, CrawlEInvoice crawlEInvoice)

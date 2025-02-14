@@ -111,18 +111,21 @@ public class HeaderService : IHeaderService
     private async Task<bool> CheckIfInvoiceRawHavingDetail(EInvoiceDto dto)
     {
         var repo = _appUOW.GetRepository<invoiceraws, ObjectId>();
-        var notHavingDetail = await repo.Get(
+        var temp = await repo.Get(
             Builders<invoiceraws>.Filter.And(
-                Builders<invoiceraws>.Filter.Eq(c => c.key, dto.key),
-                Builders<invoiceraws>.Filter.Ne(e => e.from, null),
-                Builders<invoiceraws>.Filter.Ne(e => e.type, null),
-                Builders<invoiceraws>.Filter.Eq(e => e.assets.detail.done, false),
-                Builders<invoiceraws>.Filter.Exists(e => e.assets.detail.running),
-                Builders<invoiceraws>.Filter.Lt(e => e.assets.detail.error_count, DETAIL_ERROR_COUNT),
-                Builders<invoiceraws>.Filter.Lt(e => e.assets.detail.run, DateTime.Now))
+                Builders<invoiceraws>.Filter.Eq(c => c.key, dto.key)
+            )
         );
 
-        return notHavingDetail == null;
+        if (
+            temp.from != null &&
+            temp.type != null &&
+            temp.assets.detail.done == false &&
+            temp.assets.detail.running != null &&
+            temp.assets.detail.error_count < DETAIL_ERROR_COUNT &&
+            temp.assets.detail.run < DateTime.Now) return false;
+
+        return true;
     }
 
     private async Task<bool> CheckIfExistedInvoiceHeader(EInvoiceDto dto)

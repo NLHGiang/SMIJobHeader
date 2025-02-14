@@ -20,7 +20,7 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.tthai, opt => opt.MapFrom(src => GetEInvoiceStatusCode(src.tthoadon)))
             .ForMember(dest => dest.ttxly, opt => opt.MapFrom(src => GetEInvoiceResultCode(src.kqkthdon)));
 
-        CreateMap<EinvoiceHeader, invoiceraws>();
+        CreateMap<EinvoiceHeader, invoiceheaders>();
     }
 
     private static string? ParseDate(string dateString)

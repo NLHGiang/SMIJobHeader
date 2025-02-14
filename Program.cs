@@ -62,7 +62,7 @@ builder.Host.UseWindowsService().UseSerilog();
 
 builder.Services.Configure<ETLOption>(builder.Configuration.GetSection("ETLOption"));
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("appsettings"));
-
+builder.Services.Configure<CrawlOption>(builder.Configuration.GetSection("CrawlOption"));
 
 builder.Services.AddAuthentication(p =>
 {

@@ -9,15 +9,43 @@ public static class CommonConstants
 
 public static class EInvoiceCrawlConstants
 {
+    private const string URI_EINVOICE = "/api/v1/crawl/einvoice";
+    private const string BASE_API_CRAWL = "https://api-tracuu.minvoice.com.vn/";
+    private const string API_CRAWL_TOKEN = "minvoice";
+
     public const string PURCHASE = "purchase";
     public const string SOLD = "sold";
     public const string PURCHASE_SCO = "purchase_sco";
     public const string SOLD_SCO = "sold_sco";
 
+    public const string EXCEL = "excel";
     public const string DETAIL = "detail";
     public const string XML = "xml";
     public static readonly List<string> InvoiceTypes = new() { PURCHASE, PURCHASE_SCO, SOLD, SOLD_SCO };
-    public static readonly List<string> CrawlTypes = new() { DETAIL, XML };
+    public static readonly List<string> CrawlTypes = new() { EXCEL, DETAIL, XML };
+
+    public static readonly Dictionary<string, int> EInvoiceStatusMapping = new Dictionary<string, int>
+        {
+            { "Hóa đơn mới", 1 },
+            { "Hóa đơn thay thế", 2 },
+            { "Hóa đơn điều chỉnh", 3 },
+            { "Hóa đơn đã bị thay thế", 4 },
+            { "Hóa đơn đã bị điều chỉnh", 5 },
+            { "Hóa đơn hủy", 6 }
+        };
+
+    public static readonly Dictionary<string, int> EInvoiceResultMapping = new Dictionary<string, int>
+        {
+            { "Tổng cục thuế đã nhận", 0 },
+            { "Đang tiến hành kiểm tra điều kiện cấp mã", 1 },
+            { "CQT từ chối hóa đơn theo từng lần phát sinh", 2 },
+            { "Hóa đơn đủ điều kiện cấp mã", 3 },
+            { "Hóa đơn không đủ điều kiện cấp mã", 4 },
+            { "Đã cấp mã hóa đơn", 5 },
+            { "Tổng cục thuế đã nhận không mã", 6 },
+            { "Đã kiểm tra định kỳ HĐĐT không có mã", 7 },
+            { "Tổng cục thuế đã nhận hóa đơn có mã khởi tạo từ máy tính tiền", 8 }
+        };
 }
 
 public static class EInvoiceLogCrawlConstants

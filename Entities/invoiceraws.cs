@@ -29,7 +29,7 @@ public class invoiceraws : IBaseEntity<ObjectId>
     //public DateTime? created_date { get; set; }
     //public long? __v { get; set; }
     //public Detail? detail { get; set; }
-    //public string? detail_id { get; set; }
+    public string? detail_id { get; set; }
     public Xml? xml { get; set; }
 
     [BsonId(IdGenerator = typeof(ObjectIdGenerator))]

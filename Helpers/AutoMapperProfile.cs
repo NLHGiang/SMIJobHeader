@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using SMIJobHeader.Constants;
 using SMIJobHeader.Entities;
 using SMIJobHeader.Model;
 using SMIJobHeader.Model.Config;
@@ -14,11 +15,15 @@ public class AutoMapperProfile : Profile
     {
         CreateMap<MessageLogDto, MessageLog>();
         CreateMap<PropertyConfig, ExcelColumnConfig>();
-        CreateMap<EInvoiceDto, invoiceheaders>()
-            .ForMember(dest => dest.tdlap, opt => opt.MapFrom(src => ParseDate(src.nlap)));
+        CreateMap<EInvoiceDto, EinvoiceHeader>()
+            .ForMember(dest => dest.tdlap, opt => opt.MapFrom(src => ParseDate(src.nlap)))
+            .ForMember(dest => dest.tthai, opt => opt.MapFrom(src => GetEInvoiceStatusCode(src.tthoadon)))
+            .ForMember(dest => dest.ttxly, opt => opt.MapFrom(src => GetEInvoiceResultCode(src.kqkthdon)));
+
+        CreateMap<EinvoiceHeader, invoiceraws>();
     }
 
-    public static string? ParseDate(string dateString)
+    private static string? ParseDate(string dateString)
     {
         var format = "dd/MM/yyyy";
         var provider = CultureInfo.InvariantCulture;
@@ -28,5 +33,15 @@ public class AutoMapperProfile : Profile
             return parsedDate.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
         return null;
+    }
+
+    private static int? GetEInvoiceStatusCode(string statusText)
+    {
+        return EInvoiceCrawlConstants.EInvoiceStatusMapping.TryGetValue(statusText, out int statusCode) ? statusCode : null;
+    }
+
+    private static int? GetEInvoiceResultCode(string resultText)
+    {
+        return EInvoiceCrawlConstants.EInvoiceResultMapping.TryGetValue(resultText, out int statusCode) ? statusCode : null;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SMIJobHeader.BL.Interface;
@@ -6,11 +7,14 @@ using SMIJobHeader.Common;
 using SMIJobHeader.Common.Excel;
 using SMIJobHeader.Constants;
 using SMIJobHeader.DBAccessor.Interface.Repositories;
+using SMIJobHeader.Entities;
 using SMIJobHeader.Extensions;
 using SMIJobHeader.Model;
 using SMIJobHeader.Model.CrawlData;
 using SMIJobHeader.Model.Excel;
+using SMIJobHeader.Model.Option;
 using SMIJobHeader.RabbitMQ;
+using SMIJobHeader.RestAPI;
 using SMIJobHeader.Storing;
 using static SMIJobHeader.Constants.MinioConstants;
 
@@ -24,6 +28,7 @@ public class HeaderService : IHeaderService
     private readonly IDistributedEventProducer _producer;
     private readonly IMapper _mapper;
     private readonly ILogger<HeaderService> _logger;
+    private readonly CrawlOption _crawlOption;
 
     public HeaderService(
         IAppUnitOfWork appUOW,
@@ -31,7 +36,8 @@ public class HeaderService : IHeaderService
         IDistributedEventProducer producer,
         IFileService fileService,
         IMapper mapper,
-        ILogger<HeaderService> logger
+        ILogger<HeaderService> logger,
+        IOptions<CrawlOption> crawlOption
     )
     {
         _appUOW = appUOW;
@@ -40,6 +46,7 @@ public class HeaderService : IHeaderService
         _fileService = fileService;
         _mapper = mapper;
         _logger = logger;
+        _crawlOption = crawlOption.Value;
     }
 
     public async Task DispenseHeaderMessage(string messageLog)
@@ -75,14 +82,23 @@ public class HeaderService : IHeaderService
 
             dto.key = GenerateKey(crawlEInvoice);
 
-            var isExisted = await CheckExistedInvoiceHeader(dto);
+            var isHavingDetail = await CheckIfInvoiceRawHavingDetail(dto);
+            if (isHavingDetail) continue;
+
+            var isExisted = await CheckIfExistedInvoiceHeader(dto);
             if (isExisted) continue;
 
-            invoiceheaders header = GetInvoiceHeader(crawlEInvoice, dto);
+            var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
+
+
+            crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
+            await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
+
+            invoiceheaders header = GetInvoiceHeader(crawlEInvoice, einvoiceHeader);
             listHeaders.Add(header);
 
-            crawlEInvoice.Result = header.SerializeObjectToString();
-            await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
+            var crawlService = new CrawlApiService(_crawlOption.BaseApiCrawl, _crawlOption.ApiCrawlToken);
+            await crawlService.CrawlEInvoice(crawlEInvoice, _crawlOption.UriEinvoice);
         }
 
         await CreateRangeInvoiceHeader(listHeaders);
@@ -91,7 +107,19 @@ public class HeaderService : IHeaderService
         await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
     }
 
-    private async Task<bool> CheckExistedInvoiceHeader(EInvoiceDto dto)
+    private async Task<bool> CheckIfInvoiceRawHavingDetail(EInvoiceDto dto)
+    {
+        var repo = _appUOW.GetRepository<invoiceraws, ObjectId>();
+        var havingDetail = await repo.Get(Builders<invoiceraws>.Filter.And
+        (
+            Builders<invoiceraws>.Filter.Eq(c => c.key, dto.key),
+            Builders<invoiceraws>.Filter.Ne(c => c.detail_id, null)
+        ));
+
+        return havingDetail != null;
+    }
+
+    private async Task<bool> CheckIfExistedInvoiceHeader(EInvoiceDto dto)
     {
         var repo = _appUOW.GetRepository<invoiceheaders, ObjectId>();
         var exsitedHeaders = await repo.Get(Builders<invoiceheaders>.Filter.And
@@ -102,9 +130,9 @@ public class HeaderService : IHeaderService
         return exsitedHeaders != null;
     }
 
-    private invoiceheaders GetInvoiceHeader(CrawlEInvoice crawlEInvoice, EInvoiceDto dto)
+    private invoiceheaders GetInvoiceHeader(CrawlEInvoice crawlEInvoice, EinvoiceHeader einvoiceHeader)
     {
-        var header = _mapper.Map<invoiceheaders>(dto);
+        var header = _mapper.Map<invoiceheaders>(einvoiceHeader);
         header.user = new ObjectId(crawlEInvoice.User);
         header.account = new ObjectId(crawlEInvoice.Account);
         header.from = crawlEInvoice.InvoiceType switch
@@ -166,7 +194,7 @@ public class HeaderService : IHeaderService
         await repo.InsertMany(listHeaders);
     }
 
-    private async Task<List<EInvoiceDto>> ReadEInvoiceExcel(byte[] excelBytes, CrawlEInvoice retryCrawl)
+    private async Task<List<EInvoiceDto>> ReadEInvoiceExcel(byte[] excelBytes, CrawlEInvoice crawlEInvoice)
     {
         List<EInvoiceDto> eInvoiceDtos = new();
         try

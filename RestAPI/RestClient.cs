@@ -1,5 +1,5 @@
-﻿using System.Net.Http.Headers;
-using SMIJobHeader.Extensions;
+﻿using SMIJobHeader.Extensions;
+using System.Net.Http.Headers;
 
 namespace SMIJobHeader.RestAPI;
 

@@ -22,6 +22,7 @@ namespace SMIJobHeader.BL;
 
 public class HeaderService : IHeaderService
 {
+    private const int DETAIL_ERROR_COUNT = 10;
     private readonly IAppUnitOfWork _appUOW;
     private readonly IFileService _fileService;
     private readonly IConfigService _configService;
@@ -110,13 +111,18 @@ public class HeaderService : IHeaderService
     private async Task<bool> CheckIfInvoiceRawHavingDetail(EInvoiceDto dto)
     {
         var repo = _appUOW.GetRepository<invoiceraws, ObjectId>();
-        var havingDetail = await repo.Get(Builders<invoiceraws>.Filter.And
-        (
-            Builders<invoiceraws>.Filter.Eq(c => c.key, dto.key),
-            Builders<invoiceraws>.Filter.Ne(c => c.detail_id, null)
-        ));
+        var notHavingDetail = await repo.Get(
+            Builders<invoiceraws>.Filter.And(
+                Builders<invoiceraws>.Filter.Eq(c => c.key, dto.key),
+                Builders<invoiceraws>.Filter.Ne(e => e.from, null),
+                Builders<invoiceraws>.Filter.Ne(e => e.type, null),
+                Builders<invoiceraws>.Filter.Eq(e => e.assets.detail.done, false),
+                Builders<invoiceraws>.Filter.Exists(e => e.assets.detail.running),
+                Builders<invoiceraws>.Filter.Lt(e => e.assets.detail.error_count, DETAIL_ERROR_COUNT),
+                Builders<invoiceraws>.Filter.Lt(e => e.assets.detail.run, DateTime.Now))
+        );
 
-        return havingDetail != null;
+        return notHavingDetail == null;
     }
 
     private async Task<bool> CheckIfExistedInvoiceHeader(EInvoiceDto dto)

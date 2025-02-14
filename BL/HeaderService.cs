@@ -91,7 +91,6 @@ public class HeaderService : IHeaderService
 
             var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
 
-
             crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
             await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
 

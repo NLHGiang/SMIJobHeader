@@ -4,6 +4,7 @@ namespace SMIJobHeader.Model;
 
 public class EinvoiceHeader
 {
+    public string? key { get; set; }
     public string? nbmst { get; set; } = "0309861244";
     public object? khmshdon { get; set; } = 1;
     public string? khhdon { get; set; } = "K24TBN";

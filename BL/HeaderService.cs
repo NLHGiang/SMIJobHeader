@@ -52,59 +52,66 @@ public class HeaderService : IHeaderService
 
     public async Task DispenseHeaderMessage(string messageLog)
     {
-        var crawlEInvoice = messageLog.DeserializeObject<CrawlEInvoice>();
-        var logCrawl = new LogCrawlDTO();
-        var isSuccess = true;
-        var errorMessage = string.Empty;
-
-        if (crawlEInvoice.Result.IsNullOrEmpty())
+        try
         {
-            isSuccess = false;
-            errorMessage = "Response is null or empty";
-            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage);
+            var crawlEInvoice = messageLog.DeserializeObject<CrawlEInvoice>();
+            var logCrawl = new LogCrawlDTO();
+            var isSuccess = true;
+            var errorMessage = string.Empty;
+
+            if (crawlEInvoice.Result.IsNullOrEmpty())
+            {
+                isSuccess = false;
+                errorMessage = "Response is null or empty";
+                logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage);
+                await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
+                return;
+            }
+
+            var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
+            var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
+
+            var syncTTXLys = new[] { 5, 6, 8 };
+            List<EInvoiceDto> listHeadersSynced = eInvoiceDtos
+                .Where(c => syncTTXLys.Contains(c.ttxly))
+                .ToList();
+
+            List<invoiceheaders> listHeaders = new();
+
+            foreach (var dto in listHeadersSynced)
+            {
+                UpdateNmmstAndNbmst(dto, crawlEInvoice);
+                UpdateCrawlEInvoiceProperties(dto, crawlEInvoice);
+
+                dto.key = GenerateKey(crawlEInvoice);
+
+                var isHavingDetail = await CheckIfInvoiceRawHavingDetail(dto);
+                if (isHavingDetail) continue;
+
+                var isExisted = await CheckIfExistedInvoiceHeader(dto);
+                if (isExisted) continue;
+
+                var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
+
+                crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
+                await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
+
+                invoiceheaders header = GetInvoiceHeader(crawlEInvoice, einvoiceHeader);
+                listHeaders.Add(header);
+
+                var crawlService = new CrawlApiService(_crawlOption.BaseApiCrawl, _crawlOption.ApiCrawlToken);
+                await crawlService.CrawlEInvoice(crawlEInvoice, _crawlOption.UriEinvoice);
+            }
+
+            await CreateRangeInvoiceHeader(listHeaders);
+
+            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, listHeaders.Count);
             await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
-            return;
         }
-
-        var excelBytes = Convert.FromBase64String(crawlEInvoice.Result);
-        var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
-
-        var syncTTXLys = new[] { 5, 6, 8 };
-        List<EInvoiceDto> listHeadersSynced = eInvoiceDtos
-            .Where(c => syncTTXLys.Contains(c.ttxly))
-            .ToList();
-
-        List<invoiceheaders> listHeaders = new();
-
-        foreach (var dto in listHeadersSynced)
+        catch (Exception ex)
         {
-            UpdateNmmstAndNbmst(dto, crawlEInvoice);
-            UpdateCrawlEInvoiceProperties(dto, crawlEInvoice);
-
-            dto.key = GenerateKey(crawlEInvoice);
-
-            var isHavingDetail = await CheckIfInvoiceRawHavingDetail(dto);
-            if (isHavingDetail) continue;
-
-            var isExisted = await CheckIfExistedInvoiceHeader(dto);
-            if (isExisted) continue;
-
-            var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
-
-            crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
-            await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
-
-            invoiceheaders header = GetInvoiceHeader(crawlEInvoice, einvoiceHeader);
-            listHeaders.Add(header);
-
-            var crawlService = new CrawlApiService(_crawlOption.BaseApiCrawl, _crawlOption.ApiCrawlToken);
-            await crawlService.CrawlEInvoice(crawlEInvoice, _crawlOption.UriEinvoice);
+            _logger.LogError(ex.SerializeObjectToString());
         }
-
-        await CreateRangeInvoiceHeader(listHeaders);
-
-        logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, listHeaders.Count);
-        await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
     }
 
     private async Task<bool> CheckIfInvoiceRawHavingDetail(EInvoiceDto dto)

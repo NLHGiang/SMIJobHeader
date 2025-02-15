@@ -116,6 +116,8 @@ public class HeaderService : IHeaderService
             )
         );
 
+        if (temp == null) return false;
+
         if (
             temp.from != null &&
             temp.type != null &&

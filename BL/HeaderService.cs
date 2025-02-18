@@ -184,6 +184,7 @@ public class HeaderService : IHeaderService
         crawlEInvoice.shdon = dto.shdon;
         crawlEInvoice.khmshdon = dto.khmshdon;
         crawlEInvoice.nmmst = dto.nmmst;
+        crawlEInvoice.CrawlType = EInvoiceCrawlConstants.DETAIL;
     }
 
     private string GenerateKey(CrawlEInvoice crawlEInvoice)

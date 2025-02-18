@@ -97,6 +97,7 @@ public class HeaderService : IHeaderService
                 await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
 
                 invoiceheaders header = GetInvoiceHeader(crawlEInvoice, einvoiceHeader);
+                header.run_crawl_detail = DateTime.Now;
                 listHeaders.Add(header);
 
                 var crawlService = new CrawlApiService(_crawlOption.BaseApiCrawl, _crawlOption.ApiCrawlToken);

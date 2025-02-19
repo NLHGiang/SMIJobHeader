@@ -104,16 +104,16 @@ public class HeaderService : IHeaderService
 
             dto.key = GenerateKey(crawlEInvoice);
 
-            var (shouldSkip, created) = await ProcessInvoice(dto, crawlEInvoice);
-            createdCount += created;
-
-            if (shouldSkip) continue;
-
             var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
             crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
 
-            if (created.Equals(0))
+            var (shouldSkip, created) = await ProcessInvoice(dto, crawlEInvoice);
+            createdCount += created;
+
+            if (!created.Equals(0))
                 await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString(), crawlEInvoice.IsProduct);
+
+            if (shouldSkip) continue;
 
             var header = GetMappedInvoiceHeader(crawlEInvoice, einvoiceHeader);
             header.run_crawl_detail = DateTime.Now;

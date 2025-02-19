@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using System.Globalization;
+using System.Text.Json.Nodes;
+using Newtonsoft.Json;
 using SMIJobHeader.Constants;
 using SMIJobHeader.Utils;
-using System.Globalization;
-using System.Text.Json.Nodes;
 
 namespace SMIJobHeader.Extensions;
 
@@ -40,7 +40,7 @@ public static class ObjectExtensions
 
         foreach (var fromProperty in fromProperties)
         {
-            if (notIncludeId && fromProperty.Name.ToLower() == "id"
+            if ((notIncludeId && fromProperty.Name.ToLower() == "id")
                 || !fromProperty.CanRead)
                 continue;
 
@@ -48,7 +48,7 @@ public static class ObjectExtensions
             if (toProperty == null) continue;
 
             var toValue = toProperty.GetValue(self);
-            if (onlySelfFieldNull && toValue != null || !toProperty.CanWrite) continue;
+            if ((onlySelfFieldNull && toValue != null) || !toProperty.CanWrite) continue;
 
             var parentValue = fromProperty.GetValue(parent);
             if (parentValue != null) toProperty.SetValue(self, parentValue);

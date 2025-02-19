@@ -1,11 +1,11 @@
-﻿using AutoMapper;
+﻿using System.Globalization;
+using AutoMapper;
 using SMIJobHeader.Constants;
 using SMIJobHeader.Entities;
 using SMIJobHeader.Model;
 using SMIJobHeader.Model.Config;
 using SMIJobHeader.Model.Excel;
 using SMIJobHeader.Model.Message;
-using System.Globalization;
 
 namespace SMIJobHeader.Helpers;
 
@@ -37,11 +37,15 @@ public class AutoMapperProfile : Profile
 
     private static int? GetEInvoiceStatusCode(string statusText)
     {
-        return EInvoiceCrawlConstants.EInvoiceStatusMapping.TryGetValue(statusText, out int statusCode) ? statusCode : null;
+        return EInvoiceCrawlConstants.EInvoiceStatusMapping.TryGetValue(statusText, out var statusCode)
+            ? statusCode
+            : null;
     }
 
     private static int? GetEInvoiceResultCode(string resultText)
     {
-        return EInvoiceCrawlConstants.EInvoiceResultMapping.TryGetValue(resultText, out int statusCode) ? statusCode : null;
+        return EInvoiceCrawlConstants.EInvoiceResultMapping.TryGetValue(resultText, out var statusCode)
+            ? statusCode
+            : null;
     }
 }

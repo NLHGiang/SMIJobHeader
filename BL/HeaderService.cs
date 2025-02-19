@@ -24,12 +24,12 @@ public class HeaderService : IHeaderService
 {
     private const int DETAIL_ERROR_COUNT = 10;
     private readonly IAppUnitOfWork _appUOW;
-    private readonly IFileService _fileService;
     private readonly IConfigService _configService;
-    private readonly IDistributedEventProducer _producer;
-    private readonly IMapper _mapper;
-    private readonly ILogger<HeaderService> _logger;
     private readonly CrawlOption _crawlOption;
+    private readonly IFileService _fileService;
+    private readonly ILogger<HeaderService> _logger;
+    private readonly IMapper _mapper;
+    private readonly IDistributedEventProducer _producer;
 
     public HeaderService(
         IAppUnitOfWork appUOW,
@@ -58,14 +58,13 @@ public class HeaderService : IHeaderService
             var logCrawl = new LogCrawlDTO();
             var isSuccess = true;
             var errorMessage = string.Empty;
-            var createdCount = 0;
 
             if (crawlEInvoice.Result.IsNullOrEmpty())
             {
                 isSuccess = false;
                 errorMessage = "Response is null or empty";
                 logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage);
-                await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
+                await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString(), crawlEInvoice.IsProduct);
                 return;
             }
 
@@ -73,45 +72,18 @@ public class HeaderService : IHeaderService
             var eInvoiceDtos = await ReadEInvoiceExcel(excelBytes, crawlEInvoice);
 
             var syncTTXLys = new[] { 5, 6, 8 };
-            List<EInvoiceDto> listHeadersSynced = eInvoiceDtos
+            List<EInvoiceDto> listSyncedHeaders = eInvoiceDtos
                 .Where(c => syncTTXLys.Contains(c.ttxly))
                 .ToList();
 
-            List<invoiceheaders> listHeaders = new();
-
-            foreach (var dto in listHeadersSynced)
-            {
-                UpdateNmmstAndNbmst(dto, crawlEInvoice);
-                UpdateCrawlEInvoiceProperties(dto, crawlEInvoice);
-
-                dto.key = GenerateKey(crawlEInvoice);
-
-                var invoiceraw = await GetInvoiceRaw(dto);
-                if (invoiceraw == null) createdCount++;
-
-                var isHavingDetail = CheckIfInvoiceRawHavingDetail(invoiceraw);
-                if (isHavingDetail) continue;
-
-                var isExisted = await CheckIfExistedInvoiceHeader(dto);
-                if (isExisted) continue;
-
-                var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
-
-                crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
-                await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString());
-
-                invoiceheaders header = GetInvoiceHeader(crawlEInvoice, einvoiceHeader);
-                header.run_crawl_detail = DateTime.Now;
-                listHeaders.Add(header);
-
-                var crawlService = new CrawlApiService(_crawlOption.BaseApiCrawl, _crawlOption.ApiCrawlToken);
-                await crawlService.CrawlEInvoice(crawlEInvoice, _crawlOption.UriEinvoice);
-            }
+            (var createdCount, List<invoiceheaders> listHeaders) =
+                await ProcessListSyncedHeaders(crawlEInvoice, listSyncedHeaders);
 
             await CreateRangeInvoiceHeader(listHeaders);
 
-            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, createdCount);
-            await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
+            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listSyncedHeaders.Count,
+                createdCount);
+            await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString(), crawlEInvoice.IsProduct);
         }
         catch (Exception ex)
         {
@@ -119,7 +91,60 @@ public class HeaderService : IHeaderService
         }
     }
 
-    private static bool CheckIfInvoiceRawHavingDetail(invoiceraws invoiceraw)
+    private async Task<(int createdCount, List<invoiceheaders> listHeaders)> ProcessListSyncedHeaders(
+        CrawlEInvoice crawlEInvoice, List<EInvoiceDto> listHeadersSynced)
+    {
+        var createdCount = 0;
+        List<invoiceheaders> listHeaders = new();
+
+        foreach (var dto in listHeadersSynced)
+        {
+            UpdateNmmstAndNbmst(dto, crawlEInvoice);
+            UpdateCrawlEInvoiceProperties(dto, crawlEInvoice);
+
+            dto.key = GenerateKey(crawlEInvoice);
+
+            var (shouldSkip, created) = await ProcessInvoice(dto, crawlEInvoice);
+            createdCount += created;
+
+            if (shouldSkip) continue;
+
+            var einvoiceHeader = _mapper.Map<EinvoiceHeader>(dto);
+            crawlEInvoice.Result = einvoiceHeader.SerializeObjectToString();
+
+            if (created.Equals(0))
+                await PushQueueResultSMIHeader(crawlEInvoice.SerializeObjectToString(), crawlEInvoice.IsProduct);
+
+            var header = GetMappedInvoiceHeader(crawlEInvoice, einvoiceHeader);
+            header.run_crawl_detail = DateTime.Now;
+            listHeaders.Add(header);
+
+            await RequestCrawlDetail(crawlEInvoice);
+        }
+
+        return (createdCount, listHeaders);
+    }
+
+    private async Task RequestCrawlDetail(CrawlEInvoice crawlEInvoice)
+    {
+        var crawlService = new CrawlApiService(_crawlOption.BaseApiCrawl, _crawlOption.ApiCrawlToken);
+        await crawlService.CrawlEInvoice(crawlEInvoice, _crawlOption.UriEinvoice);
+    }
+
+    private async Task<(bool, int)> ProcessInvoice(EInvoiceDto dto, CrawlEInvoice crawlEInvoice)
+    {
+        var invoiceraw = await GetInvoiceRaw(dto);
+        var isExistedInvoiceRaw = invoiceraw == null;
+
+        var createdCount = isExistedInvoiceRaw ? 1 : 0;
+
+        if (CheckIfInvoiceRawHavingDetail(invoiceraw) || await CheckIfExistedInvoiceHeader(dto))
+            return (true, createdCount);
+
+        return (false, createdCount);
+    }
+
+    private static bool CheckIfInvoiceRawHavingDetail(invoiceraws? invoiceraw)
     {
         if (invoiceraw == null) return false;
 
@@ -156,7 +181,7 @@ public class HeaderService : IHeaderService
         return exsitedHeaders != null;
     }
 
-    private invoiceheaders GetInvoiceHeader(CrawlEInvoice crawlEInvoice, EinvoiceHeader einvoiceHeader)
+    private invoiceheaders GetMappedInvoiceHeader(CrawlEInvoice crawlEInvoice, EinvoiceHeader einvoiceHeader)
     {
         var header = _mapper.Map<invoiceheaders>(einvoiceHeader);
         header.user = new ObjectId(crawlEInvoice.User);
@@ -200,7 +225,8 @@ public class HeaderService : IHeaderService
     {
         var invoiceType = GetInvoiceType(crawlEInvoice.InvoiceType);
 
-        return $"{crawlEInvoice.User}_{crawlEInvoice.Account}_{invoiceType}_{crawlEInvoice.nbmst}-{crawlEInvoice.khmshdon}-{crawlEInvoice.khhdon}-{crawlEInvoice.shdon}";
+        return
+            $"{crawlEInvoice.User}_{crawlEInvoice.Account}_{invoiceType}_{crawlEInvoice.nbmst}-{crawlEInvoice.khmshdon}-{crawlEInvoice.khhdon}-{crawlEInvoice.shdon}";
     }
 
     private string GetInvoiceType(string invoiceType)
@@ -213,7 +239,7 @@ public class HeaderService : IHeaderService
         };
     }
 
-    private async Task CreateRangeInvoiceHeader(List<invoiceheaders> listHeaders)
+    private async Task CreateRangeInvoiceHeader(List<invoiceheaders>? listHeaders)
     {
         if (listHeaders == null || !listHeaders.Any()) return;
 
@@ -238,14 +264,14 @@ public class HeaderService : IHeaderService
         {
             var base64String = Convert.ToBase64String(excelBytes);
             _logger.LogError($"[ReadEInvoiceExcel-EInvoice] {ex.Message}\n" +
-                base64String);
+                             base64String);
         }
 
         return eInvoiceDtos.Skip(1).ToList();
     }
 
     private async Task<Dictionary<string, ExcelColumnConfig>> GetConfigColumnImport(string excelConfigType,
-    bool isExport = false)
+        bool isExport = false)
     {
         var excelConfig = await _configService.GetConfigAsync(excelConfigType, "excel");
         var excelColumnConfig = _mapper.Map<List<ExcelColumnConfig>>(excelConfig);
@@ -262,21 +288,21 @@ public class HeaderService : IHeaderService
         return result;
     }
 
-    private async Task PushQueueResultSMIHeader(string result, bool isProduct = true)
+    private async Task PushQueueResultSMIHeader(string result, bool isProduct)
     {
-        await (isProduct ?
-            _producer.PublishMesageAsync(result, "invoice-raw-header", "crawl-invoice-raw",
-                "response-invoice-raw-header.*") :
-            _producer.PublishMesageAsync(result, "invoice-raw-header-test", "crawl-invoice-raw",
-              "response-invoice-raw-header-test.*"));
+        await (isProduct
+            ? _producer.PublishMesageAsync(result, "invoice-raw-header", "crawl-invoice-raw",
+                "response-invoice-raw-header.*")
+            : _producer.PublishMesageAsync(result, "invoice-raw-header-test", "crawl-invoice-raw",
+                "response-invoice-raw-header-test.*"));
     }
 
-    private async Task PushQueueResultSMILogCrawl(string result, bool isProduct = true)
+    private async Task PushQueueResultSMILogCrawl(string result, bool isProduct)
     {
-        await (isProduct ?
-            _producer.PublishMesageAsync(result, "invoice-raw-log-crawl", "crawl-invoice-raw",
-                "response-invoice-raw-log-crawl.*") :
-            _producer.PublishMesageAsync(result, "invoice-raw-log-crawl-test", "crawl-invoice-raw",
+        await (isProduct
+            ? _producer.PublishMesageAsync(result, "invoice-raw-log-crawl", "crawl-invoice-raw",
+                "response-invoice-raw-log-crawl.*")
+            : _producer.PublishMesageAsync(result, "invoice-raw-log-crawl-test", "crawl-invoice-raw",
                 "response-invoice-raw-log-crawl-test.*"));
     }
 }

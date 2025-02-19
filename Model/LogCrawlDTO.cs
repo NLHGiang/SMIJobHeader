@@ -1,9 +1,8 @@
-﻿namespace SMIJobHeader.Model;
-
+﻿using System.Globalization;
 using SMIJobHeader.Constants;
 using SMIJobHeader.Model.CrawlData;
-using System;
-using System.Globalization;
+
+namespace SMIJobHeader.Model;
 
 public class LogCrawlDTO
 {
@@ -23,7 +22,8 @@ public class LogCrawlDTO
     public int? synced { get; set; }
     public int? created { get; set; }
 
-    public void BuildLogCrawl(CrawlEInvoice crawlEInvoice, bool isSuccess, string errorMessage, int? totalRecord = null, int? syncedRecord = null, int? createdRecord = null)
+    public void BuildLogCrawl(CrawlEInvoice crawlEInvoice, bool isSuccess, string errorMessage, int? totalRecord = null,
+        int? syncedRecord = null, int? createdRecord = null)
     {
         user = crawlEInvoice.User;
         account = crawlEInvoice.Account;
@@ -59,15 +59,11 @@ public class LogCrawlDTO
         var format = "dd/MM/yyyyTHH:mm:ss";
         var provider = CultureInfo.InvariantCulture;
 
-        if (DateTime.TryParseExact(crawlEInvoice.FromDate, format, provider, DateTimeStyles.None, out DateTime geParsedDate))
-        {
+        if (DateTime.TryParseExact(crawlEInvoice.FromDate, format, provider, DateTimeStyles.None, out var geParsedDate))
             ge = geParsedDate.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ssZ");
-        }
 
-        if (DateTime.TryParseExact(crawlEInvoice.ToDate, format, provider, DateTimeStyles.None, out DateTime leParsedDate))
-        {
+        if (DateTime.TryParseExact(crawlEInvoice.ToDate, format, provider, DateTimeStyles.None, out var leParsedDate))
             le = leParsedDate.AddHours(-7).ToString("yyyy-MM-ddTHH:mm:ssZ");
-        }
     }
 
     private void SetResultCrawl(int? totalRecord, int? syncedRecord, int? createdRecord)

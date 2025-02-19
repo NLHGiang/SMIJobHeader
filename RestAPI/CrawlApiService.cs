@@ -1,5 +1,5 @@
-﻿using SMIJobHeader.Model.CrawlData;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
+using SMIJobHeader.Model.CrawlData;
 
 namespace SMIJobHeader.RestAPI;
 

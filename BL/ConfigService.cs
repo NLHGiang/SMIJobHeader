@@ -1,10 +1,10 @@
-﻿using SMIJobHeader.BL.Interface;
+﻿using System.Text;
+using System.Text.Json;
+using SMIJobHeader.BL.Interface;
 using SMIJobHeader.Constants;
 using SMIJobHeader.Extensions;
 using SMIJobHeader.Model.Config;
 using SMIJobHeader.Storing;
-using System.Text;
-using System.Text.Json;
 
 namespace SMIJobHeader.BL;
 

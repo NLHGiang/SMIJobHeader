@@ -1,5 +1,5 @@
-﻿using SMIJobHeader.Constants;
-using System.Globalization;
+﻿using System.Globalization;
+using SMIJobHeader.Constants;
 
 namespace SMIJobHeader.Utils;
 

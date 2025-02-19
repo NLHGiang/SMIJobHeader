@@ -1,6 +1,6 @@
-﻿using SMIJobHeader.Constants;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Reflection;
+using SMIJobHeader.Constants;
 using TypeSupport.Extensions;
 
 namespace SMIJobHeader.Utils;
@@ -346,7 +346,7 @@ public static class DataObjectConverter
     public static bool IsMeanEquals(this string? str1, string? str2)
     {
         if (str1 == null && str2 == null) return true;
-        if (str1 == null && str2 != null || str1 != null && str2 == null) return false;
+        if ((str1 == null && str2 != null) || (str1 != null && str2 == null)) return false;
 
         return str1.ToLowerInvariant().Equals(str2.ToLowerInvariant());
     }
@@ -354,7 +354,7 @@ public static class DataObjectConverter
     public static bool IsMeanContain(this string str1, string str2)
     {
         if (str1 == null && str2 == null) return true;
-        if (str1 == null && str2 != null || str1 != null && str2 == null) return false;
+        if ((str1 == null && str2 != null) || (str1 != null && str2 == null)) return false;
 
         return str1.ToLowerInvariant().Contains(str2.ToLowerInvariant());
     }

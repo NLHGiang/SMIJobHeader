@@ -1,10 +1,10 @@
+using System.Diagnostics;
+using System.Reflection;
+using System.Text;
 using Newtonsoft.Json;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 using RabbitMQ.Client;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
 
 namespace SMIJobHeader.RabbitMQ;
 

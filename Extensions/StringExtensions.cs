@@ -1,6 +1,6 @@
-﻿using SMIJobHeader.Utils;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
+using SMIJobHeader.Utils;
 
 namespace SMIJobHeader.Extensions;
 

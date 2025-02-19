@@ -36,6 +36,8 @@ public class CrawlEInvoice
 
     [JsonProperty("isSuccess")] public bool IsSuccess { get; set; } = true;
 
+    [JsonProperty("isProduct")] public bool IsProduct { get; set; } = true;
+
     [JsonProperty("minutesAppendCrawlError")]
     public int MinutesAppendCrawlError { get; set; }
 }

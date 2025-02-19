@@ -58,7 +58,7 @@ public class HeaderService : IHeaderService
             var logCrawl = new LogCrawlDTO();
             var isSuccess = true;
             var errorMessage = string.Empty;
-            var created = 0;
+            var createdCount = 0;
 
             if (crawlEInvoice.Result.IsNullOrEmpty())
             {
@@ -87,7 +87,7 @@ public class HeaderService : IHeaderService
                 dto.key = GenerateKey(crawlEInvoice);
 
                 var invoiceraw = await GetInvoiceRaw(dto);
-                if (invoiceraw == null) created++;
+                if (invoiceraw == null) createdCount++;
 
                 var isHavingDetail = CheckIfInvoiceRawHavingDetail(invoiceraw);
                 if (isHavingDetail) continue;
@@ -110,7 +110,7 @@ public class HeaderService : IHeaderService
 
             await CreateRangeInvoiceHeader(listHeaders);
 
-            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, created);
+            logCrawl.BuildLogCrawl(crawlEInvoice, isSuccess, errorMessage, eInvoiceDtos.Count, listHeadersSynced.Count, createdCount);
             await PushQueueResultSMILogCrawl(logCrawl.SerializeObjectToString());
         }
         catch (Exception ex)

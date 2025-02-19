@@ -85,7 +85,10 @@ public class HeaderService : IHeaderService
 
                 dto.key = GenerateKey(crawlEInvoice);
 
-                var isHavingDetail = await CheckIfInvoiceRawHavingDetail(dto);
+                var invoiceraw = await GetInvoiceRaw(dto);
+                if (invoiceraw == null) continue;
+
+                var isHavingDetail = CheckIfInvoiceRawHavingDetail(invoiceraw);
                 if (isHavingDetail) continue;
 
                 var isExisted = await CheckIfExistedInvoiceHeader(dto);
@@ -115,7 +118,22 @@ public class HeaderService : IHeaderService
         }
     }
 
-    private async Task<bool> CheckIfInvoiceRawHavingDetail(EInvoiceDto dto)
+    private static bool CheckIfInvoiceRawHavingDetail(invoiceraws invoiceraw)
+    {
+        if (invoiceraw == null) return false;
+
+        if (
+            invoiceraw.from != null &&
+            invoiceraw.type != null &&
+            invoiceraw.assets.detail.done == false &&
+            invoiceraw.assets.detail.running != null &&
+            invoiceraw.assets.detail.error_count < DETAIL_ERROR_COUNT &&
+            invoiceraw.assets.detail.run < DateTime.Now) return false;
+
+        return true;
+    }
+
+    private async Task<invoiceraws> GetInvoiceRaw(EInvoiceDto dto)
     {
         var repo = _appUOW.GetRepository<invoiceraws, ObjectId>();
         var temp = await repo.Get(
@@ -123,18 +141,7 @@ public class HeaderService : IHeaderService
                 Builders<invoiceraws>.Filter.Eq(c => c.key, dto.key)
             )
         );
-
-        if (temp == null) return false;
-
-        if (
-            temp.from != null &&
-            temp.type != null &&
-            temp.assets.detail.done == false &&
-            temp.assets.detail.running != null &&
-            temp.assets.detail.error_count < DETAIL_ERROR_COUNT &&
-            temp.assets.detail.run < DateTime.Now) return false;
-
-        return true;
+        return temp;
     }
 
     private async Task<bool> CheckIfExistedInvoiceHeader(EInvoiceDto dto)
